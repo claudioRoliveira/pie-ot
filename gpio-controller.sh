@@ -11,7 +11,7 @@ status)
 echo "===== GPIO CONTROLLER STATUS ====="
 echo ""
 
-systemctl is-active gpio-controller
+systemctl is-active gpio-controller >/dev/null && echo "SERVICE: RUNNING" || echo "SERVICE: STOPPED"
 
 echo ""
 echo "Entradas:"
@@ -77,6 +77,12 @@ clear-sim)
 rm -f $APP_DIR/simulation.json
 
 echo "Simulações removidas"
+
+;;
+
+service)
+
+systemctl status gpio-controller --no-pager
 
 ;;
 

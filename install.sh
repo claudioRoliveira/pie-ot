@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 if [ "$EUID" -ne 0 ]; then
   echo "Execute com sudo"
   exit 1
@@ -7,6 +7,7 @@ fi
 
 
 APP_DIR="/opt/gpio-controller"
+BASE_URL="https://raw.githubusercontent.com/claudioRoliveira/pie-ot/master"
 SERVICE_NAME="gpio-controller"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 LOGROTATE_FILE="/etc/logrotate.d/gpio-controller"
@@ -16,16 +17,13 @@ echo "GPIO Controller Installer"
 echo "==============================="
 
 # criar diretório
-if [ ! -d "$APP_DIR" ]; then
-    echo "Criando diretório $APP_DIR"
-    mkdir -p $APP_DIR
-fi
+echo "Criando diretório $APP_DIR"
+mkdir -p $APP_DIR
 
-# mover arquivos se estiver rodando da mesma pasta
-echo "Copiando arquivos..."
+echo "Baixando arquivos..."
 
-install -m 755 main.py $APP_DIR/main.py
-install -m 644 config.json $APP_DIR/config.json
+curl -fsSL "$BASE_URL/main.py" -o "$APP_DIR/main.py"
+curl -fsSL "$BASE_URL/config.json" -o "$APP_DIR/config.json"
 
 
 # instalar dependências
@@ -47,8 +45,9 @@ if [ ! -f "$APP_DIR/events.log" ]; then
 fi
 
 # permissões
-
+chmod 755 $APP_DIR/main.py
 chmod 755 -R $APP_DIR
+chmod 644 $APP_DIR/config.json
 chmod 644 $APP_DIR/events.log
 
 echo "Instalando logrotate..."
@@ -75,6 +74,9 @@ tee /usr/local/bin/gpio-controller > /dev/null <<'EOF'
 
 APP_DIR="/opt/gpio-controller"
 STATUS_FILE="$APP_DIR/status.json"
+if [ ! -f "$APP_DIR/status.json" ]; then
+    echo "{}" > $APP_DIR/status.json
+fi
 LOG_FILE="$APP_DIR/events.log"
 
 case "$1" in
@@ -84,7 +86,7 @@ status)
 echo "===== GPIO CONTROLLER STATUS ====="
 echo ""
 
-systemctl is-active gpio-controller
+systemctl is-active gpio-controller >/dev/null && echo "SERVICE: RUNNING" || echo "SERVICE: STOPPED"
 
 echo ""
 echo "Entradas:"
@@ -114,7 +116,7 @@ tail -n 20 $LOG_FILE
 
 restart)
 
-sudo systemctl restart gpio-controller
+systemctl restart gpio-controller
 echo "Serviço reiniciado"
 
 ;;
@@ -150,6 +152,12 @@ clear-sim)
 rm -f $APP_DIR/simulation.json
 
 echo "Simulações removidas"
+
+;;
+
+service)
+
+systemctl status gpio-controller --no-pager
 
 ;;
 
