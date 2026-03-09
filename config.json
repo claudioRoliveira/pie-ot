@@ -1,0 +1,23 @@
+{
+  "debounce_ms": 50,
+  "rules": [
+    {
+      "name": "porta_aberta_60s",
+      "input": 17,
+      "trigger": "high_for",
+      "duration": 60,
+      "output": 22,
+      "action": "on",
+      "cooldown": 300
+    },
+    {
+      "name": "botao_pulso",
+      "input": 27,
+      "trigger": "rising",
+      "output": 23,
+      "action": "pulse",
+      "pulse_time": 10,
+      "cooldown": 5
+    }
+  ]
+}
