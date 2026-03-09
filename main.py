@@ -2,9 +2,8 @@ import RPi.GPIO as GPIO
 import json
 import time
 import os
-from systemd import daemon
-import json
 import datetime
+from systemd import daemon  # type: ignore
 
 STATUS_FILE = "status.json"
 CONFIG_FILE = "config.json"
@@ -17,10 +16,16 @@ VALID_ACTIONS = {"on", "off", "pulse"}
 rules = []
 inputs = {}
 timers = {}
+
 debounce_ms = 50
 
 GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
+
+# ---------------------------------------------------
+# logging
+# ---------------------------------------------------
 
 def log_event(input_pin, state, rule_name, output_pin, action):
 
@@ -31,6 +36,11 @@ def log_event(input_pin, state, rule_name, output_pin, action):
     with open(LOG_FILE, "a") as f:
         f.write(line)
 
+
+# ---------------------------------------------------
+# simulation
+# ---------------------------------------------------
+
 def get_simulated_inputs():
 
     if not os.path.exists(SIM_FILE):
@@ -39,9 +49,13 @@ def get_simulated_inputs():
     try:
         with open(SIM_FILE) as f:
             return json.load(f)
-    except:
+    except Exception:
         return {}
 
+
+# ---------------------------------------------------
+# config validation
+# ---------------------------------------------------
 
 def validate_rule(rule):
 
@@ -65,6 +79,10 @@ def validate_rule(rule):
 
     return True
 
+
+# ---------------------------------------------------
+# load configuration
+# ---------------------------------------------------
 
 def load_config():
 
@@ -91,7 +109,9 @@ def load_config():
         o = r["output"]
 
         if i not in inputs:
+
             GPIO.setup(i, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
             inputs[i] = {
                 "last": GPIO.input(i),
                 "since": time.time(),
@@ -104,6 +124,10 @@ def load_config():
     rules.clear()
     rules.extend(new_rules)
 
+
+# ---------------------------------------------------
+# rule execution
+# ---------------------------------------------------
 
 def execute(rule):
 
@@ -138,6 +162,10 @@ def execute(rule):
     log_event(rule["input"], state, rule["name"], output, action)
 
 
+# ---------------------------------------------------
+# timer management
+# ---------------------------------------------------
+
 def update_timers():
 
     now = time.time()
@@ -149,18 +177,22 @@ def update_timers():
             del timers[o]
 
 
+# ---------------------------------------------------
+# input monitoring
+# ---------------------------------------------------
+
 def check_inputs():
 
     now = time.time()
+    sim = get_simulated_inputs()
 
     for pin in inputs:
-
-        sim = get_simulated_inputs()
 
         if str(pin) in sim:
             val = sim[str(pin)]
         else:
             val = GPIO.input(pin)
+
         s = inputs[pin]
 
         if val != s["last"]:
@@ -198,8 +230,21 @@ def check_inputs():
 
         s["last"] = val
 
+
+# ---------------------------------------------------
+# watchdog
+# ---------------------------------------------------
+
 def feed_watchdog():
-    daemon.notify("WATCHDOG=1")
+    try:
+        daemon.notify("WATCHDOG=1")
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------
+# status file
+# ---------------------------------------------------
 
 def write_status():
 
@@ -217,16 +262,24 @@ def write_status():
         else:
             status["inputs"][pin] = GPIO.input(pin)
 
-    for rule in rules:
-        o = rule["output"]
+    outputs = {r["output"] for r in rules}
+
+    for o in outputs:
         status["outputs"][o] = GPIO.input(o)
 
     with open(STATUS_FILE, "w") as f:
         json.dump(status, f)
 
+
+# ---------------------------------------------------
+# main loop
+# ---------------------------------------------------
+
 def main():
 
     load_config()
+
+    daemon.notify("READY=1")
 
     last_config = os.path.getmtime(CONFIG_FILE)
 
@@ -235,7 +288,9 @@ def main():
         check_inputs()
         update_timers()
         write_status()
+
         feed_watchdog()
+
         mtime = os.path.getmtime(CONFIG_FILE)
 
         if mtime != last_config:
@@ -244,6 +299,10 @@ def main():
 
         time.sleep(0.1)
 
+
+# ---------------------------------------------------
+# entrypoint
+# ---------------------------------------------------
 
 if __name__ == "__main__":
 

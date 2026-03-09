@@ -188,13 +188,14 @@ Description=GPIO Controller
 After=multi-user.target
 
 [Service]
-ExecStart=/usr/bin/python3 $APP_DIR/main.py
-WorkingDirectory=$APP_DIR
+Type=notify
+ExecStart=/usr/bin/python3 /opt/gpio-controller/main.py
+WorkingDirectory=/opt/gpio-controller
 Restart=always
 RestartSec=3
 
-# watchdog
 WatchdogSec=30
+NotifyAccess=main
 
 StandardOutput=null
 StandardError=null
