@@ -2,6 +2,7 @@ import RPi.GPIO as GPIO
 import json
 import time
 import os
+from systemd import daemon
 import json
 import datetime
 
@@ -198,10 +199,7 @@ def check_inputs():
         s["last"] = val
 
 def feed_watchdog():
-    try:
-        os.system("systemd-notify WATCHDOG=1")
-    except:
-        pass
+    daemon.notify("WATCHDOG=1")
 
 def write_status():
 
