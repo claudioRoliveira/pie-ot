@@ -193,9 +193,6 @@ WorkingDirectory=$APP_DIR
 Restart=always
 RestartSec=3
 
-Type=notify
-NotifyAccess=all
-
 # watchdog
 WatchdogSec=30
 
