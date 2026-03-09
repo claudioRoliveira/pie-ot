@@ -37,6 +37,7 @@ apt-get install -y \
     python3-rpi.gpio \
     logrotate \
     watchdog \
+    python3-systemd \
     jq
 
 # criar log
